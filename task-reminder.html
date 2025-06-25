@@ -96,6 +96,7 @@
                         class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
                     Add Task
                 </button>
+                
             </div>
         </div>
 
@@ -339,65 +340,76 @@
                 }
                 
                 // Request permission if not already granted
-                if (Notification.permission === 'default') {
+                if (Notification.permission === 'granted') {
+                    this.createDesktopNotification(task);
+                } else if (Notification.permission !== 'denied') {
+                    // Request permission again if not denied
                     Notification.requestPermission().then(permission => {
                         if (permission === 'granted') {
                             this.createDesktopNotification(task);
+                        } else {
+                            console.log('Notification permission not granted');
                         }
                     });
-                } else if (Notification.permission === 'granted') {
-                    this.createDesktopNotification(task);
                 } else {
                     console.log('Desktop notifications are blocked');
                 }
             }
 
             createDesktopNotification(task) {
-                const notification = new Notification('🔔 Task Reminder', {
-                    body: `⏰ ${task.description}`,
-                    icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzM2NmI5ZiI+PHBhdGggZD0iTTEyIDIyYzEuMSAwIDItLjkgMi0yaC00YzAgMS4xLjkgMiAyIDJ6bS02LTZWOGMwLTMuMTcgMS43OS01Ljk1IDQuNzYtNy4xNFYzaDEuODJ2Ljg2QzE4Ljc4IDUuMDcgMTggOC44MyAxOCAydjhoLTN2LThoLTNWMmMwLS41NS0uNDUtMS0xLTEtLjU1IDAtMSAuNDUtMSAxdjNjMCAuNTUtLjQ1IDEtMSAxcyAxLS40NSAxLTEiLz48L3N2Zz4=',
-                    badge: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmNjY2NiI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiLz48L3N2Zz4=',
-                    tag: `task-reminder-${task.id}`,
-                    requireInteraction: true, // Keeps notification visible until user interaction
-                    silent: false, // Allow system sound if audio fails
-                    timestamp: Date.now(),
-                    data: { taskId: task.id },
-                    actions: [
-                        {
-                            action: 'mark-complete',
-                            title: '✅ Mark Complete'
-                        },
-                        {
-                            action: 'snooze',
-                            title: '😴 Snooze 5min'
-                        }
-                    ]
-                });
-                
-                // Handle notification click
-                notification.onclick = () => {
-                    window.focus();
-                    notification.close();
-                    // Optionally scroll to the task in the UI
-                    this.highlightTask(task.id);
-                };
-                
-                // Handle notification actions (if supported)
-                if ('serviceWorker' in navigator) {
-                    notification.addEventListener('notificationclick', (event) => {
-                        if (event.action === 'mark-complete') {
-                            this.removeTask(task.id);
-                        } else if (event.action === 'snooze') {
-                            this.snoozeTask(task.id, 5); // Snooze for 5 minutes
-                        }
-                        notification.close();
+                try {
+                    console.log('Creating desktop notification for task:', task.description);
+                    
+                    const notification = new Notification('🔔 Task Reminder', {
+                        body: `⏰ ${task.description}`,
+                        icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzM2NmI5ZiI+PHBhdGggZD0iTTEyIDIyYzEuMSAwIDItLjkgMi0yaC00YzAgMS4xLjkgMiAyIDJ6bS02LTZWOGMwLTMuMTcgMS43OS01Ljk1IDQuNzYtNy4xNFYzaDEuODJ2Ljg2QzE4Ljc4IDUuMDcgMTggOC44MyAxOCAydjhoLTN2LThoLTNWMmMwLS41NS0uNDUtMS0xLTEtLjU1IDAtMSAuNDUtMSAxdjNjMCAuNTUtLjQ1IDEtMSAxcyAxLS40NSAxLTEiLz48L3N2Zz4=',
+                        tag: `task-reminder-${task.id}`,
+                        requireInteraction: true, // Keeps notification visible until user interaction
+                        silent: false, // Allow system sound if audio fails
+                        timestamp: Date.now(),
+                        data: { taskId: task.id },
+                        actions: [
+                            {
+                                action: 'mark-complete',
+                                title: '✅ Mark Complete'
+                            },
+                            {
+                                action: 'snooze',
+                                title: '😴 Snooze 5min'
+                            }
+                        ]
                     });
+                    
+                    console.log('Notification created successfully');
+                    
+                    // Handle notification click
+                    notification.onclick = () => {
+                        console.log('Notification clicked');
+                        window.focus();
+                        notification.close();
+                        this.highlightTask(task.id);
+                    };
+                    
+                    // Handle notification errors
+                    notification.onerror = (error) => {
+                        console.error('Notification error:', error);
+                    };
+                    
+                    // Auto-close after 10 seconds for testing
+                    setTimeout(() => {
+                        try {
+                            notification.close();
+                            console.log('Notification auto-closed');
+                        } catch (e) {
+                            console.log('Notification already closed');
+                        }
+                    }, 10000);
+                    
+                } catch (error) {
+                    console.error('Failed to create notification:', error);
+                    // Show in-app notification as fallback
+                    this.showNotification(`⚠️ Desktop notification failed. Task completed: ${task.description}`, 'error', 8000);
                 }
-                
-                // Auto-close after 30 seconds if not interacted with
-                setTimeout(() => {
-                    notification.close();
-                }, 30000);
             }
 
             highlightTask(taskId) {
@@ -428,6 +440,7 @@
                     this.showNotification(`Task snoozed for ${minutes} minutes`, 'info');
                 }
             }
+
 
             renderTasks() {
                 const $tasksList = $('#tasksList');
@@ -591,17 +604,15 @@
             }
         }
 
-        // Request notification permission with better handling
-        if ('Notification' in window && Notification.permission === 'default') {
-            Notification.requestPermission().then(permission => {
-                if (permission === 'granted') {
-                    console.log('Desktop notifications enabled');
-                } else if (permission === 'denied') {
-                    console.log('Desktop notifications blocked by user');
-                } else {
-                    console.log('Desktop notification permission dismissed');
-                }
-            });
+        // Request notification permission once, if needed
+        if ('Notification' in window) {
+            if (Notification.permission === 'default') {
+                Notification.requestPermission().then(permission => {
+                    console.log(`Notification permission: ${permission}`);
+                });
+            } else {
+                console.log(`Notification already set: ${Notification.permission}`);
+            }
         }
 
         // Initialize the app
