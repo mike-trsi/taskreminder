@@ -247,13 +247,8 @@
                 // Audio notification
                 this.playNotificationSound();
                 
-                // Browser notification
-                if (Notification.permission === 'granted') {
-                    new Notification('Task Reminder', {
-                        body: task.description,
-                        icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>'
-                    });
-                }
+                // Enhanced desktop notification
+                this.showDesktopNotification(task);
                 
                 // Visual notification
                 this.showNotification(`Reminder: ${task.description}`, 'reminder', 10000);
@@ -334,6 +329,104 @@
                 // Play the sound
                 oscillator.start(baseTime);
                 oscillator.stop(baseTime + 0.3);
+            }
+
+            showDesktopNotification(task) {
+                // Check if notifications are supported
+                if (!('Notification' in window)) {
+                    console.log('This browser does not support desktop notifications');
+                    return;
+                }
+                
+                // Request permission if not already granted
+                if (Notification.permission === 'default') {
+                    Notification.requestPermission().then(permission => {
+                        if (permission === 'granted') {
+                            this.createDesktopNotification(task);
+                        }
+                    });
+                } else if (Notification.permission === 'granted') {
+                    this.createDesktopNotification(task);
+                } else {
+                    console.log('Desktop notifications are blocked');
+                }
+            }
+
+            createDesktopNotification(task) {
+                const notification = new Notification('🔔 Task Reminder', {
+                    body: `⏰ ${task.description}`,
+                    icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzM2NmI5ZiI+PHBhdGggZD0iTTEyIDIyYzEuMSAwIDItLjkgMi0yaC00YzAgMS4xLjkgMiAyIDJ6bS02LTZWOGMwLTMuMTcgMS43OS01Ljk1IDQuNzYtNy4xNFYzaDEuODJ2Ljg2QzE4Ljc4IDUuMDcgMTggOC44MyAxOCAydjhoLTN2LThoLTNWMmMwLS41NS0uNDUtMS0xLTEtLjU1IDAtMSAuNDUtMSAxdjNjMCAuNTUtLjQ1IDEtMSAxcyAxLS40NSAxLTEiLz48L3N2Zz4=',
+                    badge: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmNjY2NiI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiLz48L3N2Zz4=',
+                    tag: `task-reminder-${task.id}`,
+                    requireInteraction: true, // Keeps notification visible until user interaction
+                    silent: false, // Allow system sound if audio fails
+                    timestamp: Date.now(),
+                    data: { taskId: task.id },
+                    actions: [
+                        {
+                            action: 'mark-complete',
+                            title: '✅ Mark Complete'
+                        },
+                        {
+                            action: 'snooze',
+                            title: '😴 Snooze 5min'
+                        }
+                    ]
+                });
+                
+                // Handle notification click
+                notification.onclick = () => {
+                    window.focus();
+                    notification.close();
+                    // Optionally scroll to the task in the UI
+                    this.highlightTask(task.id);
+                };
+                
+                // Handle notification actions (if supported)
+                if ('serviceWorker' in navigator) {
+                    notification.addEventListener('notificationclick', (event) => {
+                        if (event.action === 'mark-complete') {
+                            this.removeTask(task.id);
+                        } else if (event.action === 'snooze') {
+                            this.snoozeTask(task.id, 5); // Snooze for 5 minutes
+                        }
+                        notification.close();
+                    });
+                }
+                
+                // Auto-close after 30 seconds if not interacted with
+                setTimeout(() => {
+                    notification.close();
+                }, 30000);
+            }
+
+            highlightTask(taskId) {
+                // Add visual highlight to the task in the UI
+                const taskElements = document.querySelectorAll('.task-item');
+                taskElements.forEach(element => {
+                    const button = element.querySelector('button[onclick*="' + taskId + '"]');
+                    if (button) {
+                        element.style.backgroundColor = '#fef3c7';
+                        element.style.transform = 'scale(1.02)';
+                        setTimeout(() => {
+                            element.style.backgroundColor = '';
+                            element.style.transform = '';
+                        }, 3000);
+                    }
+                });
+            }
+
+            snoozeTask(taskId, minutes) {
+                const task = this.tasks.find(t => t.id === taskId);
+                if (task && task.completed) {
+                    // Reactivate the task and set new reminder time
+                    task.completed = false;
+                    task.reminderTime = new Date(Date.now() + minutes * 60000);
+                    this.scheduleReminder(task);
+                    this.saveTasks();
+                    this.renderTasks();
+                    this.showNotification(`Task snoozed for ${minutes} minutes`, 'info');
+                }
             }
 
             renderTasks() {
@@ -492,9 +585,17 @@
             }
         }
 
-        // Request notification permission
+        // Request notification permission with better handling
         if ('Notification' in window && Notification.permission === 'default') {
-            Notification.requestPermission();
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    console.log('Desktop notifications enabled');
+                } else if (permission === 'denied') {
+                    console.log('Desktop notifications blocked by user');
+                } else {
+                    console.log('Desktop notification permission dismissed');
+                }
+            });
         }
 
         // Initialize the app
