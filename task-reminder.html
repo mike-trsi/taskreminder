@@ -282,40 +282,58 @@
                     // Create audio context
                     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
                     
-                    // Create oscillator for notification sound
-                    const oscillator = audioContext.createOscillator();
-                    const gainNode = audioContext.createGain();
-                    
-                    // Connect oscillator to gain to output
-                    oscillator.connect(gainNode);
-                    gainNode.connect(audioContext.destination);
-                    
-                    // Configure the sound (pleasant notification tone)
-                    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-                    oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
-                    oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.2);
-                    
-                    // Set volume envelope
-                    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-                    gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.05);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-                    
-                    // Play the sound
-                    oscillator.start(audioContext.currentTime);
-                    oscillator.stop(audioContext.currentTime + 0.3);
+                    // Create a more alerting notification sound sequence
+                    this.createAlertSound(audioContext, 0);
+                    this.createAlertSound(audioContext, 0.4);
+                    this.createAlertSound(audioContext, 0.8);
                     
                 } catch (error) {
                     // Fallback: try playing a simple beep using data URL
                     console.log('Web Audio API not supported, using fallback');
                     try {
-                        // Create a simple beep sound using data URL
+                        // Create a more prominent beep sound using data URL
                         const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmUgBDqX2vPJfCwFKXvJ8tuNOgkZZ7zx5Z1NEAxPqOH0t2MdBTGQ2fHNeSsFJXfG8N+QQAoUXrTp66hVFApGn+DyvmUgBDqX2vPJfCwFKXvJ8tuNOQkZZ7zx5Z1NEAxPqOH0t2MdBTqX2vPJfCwFKXvJ8tuNOQkZZ7zx5Z1NEA==');
-                        audio.volume = 0.3;
+                        audio.volume = 0.7;
                         audio.play();
+                        
+                        // Play multiple beeps for more alerting effect
+                        setTimeout(() => {
+                            const audio2 = audio.cloneNode();
+                            audio2.play();
+                        }, 400);
+                        setTimeout(() => {
+                            const audio3 = audio.cloneNode();
+                            audio3.play();
+                        }, 800);
                     } catch (fallbackError) {
                         console.log('Audio notification not supported');
                     }
                 }
+            }
+
+            createAlertSound(audioContext, startTime) {
+                // Create oscillator for notification sound
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                // Connect oscillator to gain to output
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                // Configure the sound (more alerting tone sequence)
+                const baseTime = audioContext.currentTime + startTime;
+                oscillator.frequency.setValueAtTime(1000, baseTime);
+                oscillator.frequency.setValueAtTime(800, baseTime + 0.1);
+                oscillator.frequency.setValueAtTime(1200, baseTime + 0.2);
+                
+                // Set volume envelope (louder and more prominent)
+                gainNode.gain.setValueAtTime(0, baseTime);
+                gainNode.gain.linearRampToValueAtTime(0.6, baseTime + 0.02);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, baseTime + 0.3);
+                
+                // Play the sound
+                oscillator.start(baseTime);
+                oscillator.stop(baseTime + 0.3);
             }
 
             renderTasks() {
@@ -376,11 +394,16 @@
                 
                 const hours = Math.floor(diff / (1000 * 60 * 60));
                 const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
                 
                 if (hours > 0) {
                     return `${hours}h ${minutes}m remaining`;
-                } else {
+                } else if (minutes > 1) {
                     return `${minutes}m remaining`;
+                } else if (minutes === 1) {
+                    return `1m ${seconds}s remaining`;
+                } else {
+                    return `${seconds}s remaining`;
                 }
             }
 
@@ -449,10 +472,23 @@
                     this.renderTasks();
                 }
                 
-                // Update task list every minute
+                // Update task list every minute, but every second when tasks are under 1 minute
                 setInterval(() => {
                     this.renderTasks();
                 }, 60000);
+                
+                // Additional interval for second-level updates when tasks are under 1 minute
+                setInterval(() => {
+                    const hasTasksUnderOneMinute = this.tasks.some(task => {
+                        if (task.completed) return false;
+                        const diff = task.reminderTime.getTime() - new Date().getTime();
+                        return diff > 0 && diff < 60000; // Less than 1 minute
+                    });
+                    
+                    if (hasTasksUnderOneMinute) {
+                        this.renderTasks();
+                    }
+                }, 1000);
             }
         }
 
