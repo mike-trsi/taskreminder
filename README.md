@@ -14,6 +14,7 @@ A responsive task reminder web application built with HTML, jQuery, and Tailwind
 - 💾 **Persistent Storage**: Tasks are saved locally and persist between sessions
 - ⏱️ **Real-time Updates**: Live countdown timers for all active tasks
 - 🎨 **Modern UI**: Clean, modern design using Tailwind CSS
+- 😴 **Snooze Reminders**: Use the "Snooze" button in a reminder notification to delay the task by five minutes
 
 ## Technology Stack
 
@@ -48,6 +49,7 @@ A responsive task reminder web application built with HTML, jQuery, and Tailwind
 - **Browser Notifications**: Native OS notifications (requires permission)
 - **Audio Notifications**: Pleasant two-tone chime using Web Audio API
 - **Fallback Support**: Graceful degradation for unsupported browsers
+- **Snooze Option**: Click "Snooze" in a reminder notification to postpone that task for another five minutes
 
 ### Responsive Design
 - Mobile-first approach with Tailwind CSS

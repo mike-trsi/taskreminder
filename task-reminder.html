@@ -118,6 +118,9 @@
     <div id="notificationContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
 
     <script>
+        // Default number of minutes to postpone a task when snoozed
+        const DEFAULT_SNOOZE_MINUTES = 5;
+
         class TaskReminder {
             constructor() {
                 this.tasks = [];
@@ -251,8 +254,13 @@
                 // Enhanced desktop notification
                 this.showDesktopNotification(task);
                 
-                // Visual notification
-                this.showNotification(`Reminder: ${task.description}`, 'reminder', 10000);
+                // Visual notification with snooze option
+                this.showNotification(
+                    `Reminder: ${task.description}`,
+                    'reminder',
+                    10000,
+                    { snoozeCallback: () => this.snoozeTask(task.id, DEFAULT_SNOOZE_MINUTES) }
+                );
                 
                 // Mark task as completed
                 task.completed = true;
@@ -523,30 +531,44 @@
                 }
             }
 
-            showNotification(message, type = 'info', duration = 5000) {
+            showNotification(message, type = 'info', duration = 5000, options = {}) {
                 const colors = {
                     success: 'bg-green-500',
                     error: 'bg-red-500',
                     info: 'bg-blue-500',
                     reminder: 'bg-purple-500'
                 };
-                
+
+                const snoozeBtn = options.snoozeCallback ?
+                    `<button type="button" class="snooze-btn ml-2 px-2 py-1 bg-white bg-opacity-20 rounded hover:bg-opacity-30 text-sm">Snooze ${DEFAULT_SNOOZE_MINUTES}m</button>` : '';
+
                 const notification = $(`
                     <div class="notification ${colors[type]} text-white px-6 py-4 rounded-lg shadow-lg max-w-sm">
                         <div class="flex items-center justify-between">
                             <span>${message}</span>
-                            <button class="ml-4 text-white hover:text-gray-200 focus:outline-none">
-                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                </svg>
-                            </button>
+                            <div class="flex items-center">
+                                ${snoozeBtn}
+                                <button type="button" aria-label="Dismiss notification" class="ml-4 text-white hover:text-gray-200 focus:outline-none">
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 `);
-                
-                notification.find('button').on('click', function() {
+
+                // Close button is always the last button
+                notification.find('button').last().on('click', function() {
                     notification.remove();
                 });
+
+                if (options.snoozeCallback) {
+                    notification.find('.snooze-btn').on('click', () => {
+                        notification.remove();
+                        options.snoozeCallback();
+                    });
+                }
                 
                 $('#notificationContainer').append(notification);
                 
