@@ -149,10 +149,10 @@
                 const count = $(this).val().length;
                 $('#charCount').text(count);
                 
-                if (count > 100) {
-                    $('#charCount').addClass('text-orange-500');
-                } else if (count > 110) {
+                if (count > 110) {
                     $('#charCount').addClass('text-red-500').removeClass('text-orange-500');
+                } else if (count > 100) {
+                    $('#charCount').addClass('text-orange-500');
                 } else {
                     $('#charCount').removeClass('text-orange-500 text-red-500');
                 }
