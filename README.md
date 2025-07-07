@@ -1,6 +1,6 @@
 # Task Reminder Web Application - AI Playground
 
-A responsive task reminder web application built with Warp and Codex using HTML, jQuery, and Tailwind CSS that helps you stay organized with smart notifications.
+A responsive task reminder web application built as a test for Warp 2.0 and Codex using HTML, jQuery, and Tailwind CSS that helps you stay organized with smart notifications.
 
 ## Features
 
